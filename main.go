@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type LineItem struct {
@@ -79,6 +80,8 @@ func processLineItems(data [][]string) []LineItem {
 }
 
 func main() {
+	readingTime := time.Now()
+
 	lineItemRaw := util.Readfile("./assets/lineitem.tbl")
 	supplierRaw := util.Readfile("./assets/supplier.tbl")
 
@@ -88,6 +91,9 @@ func main() {
 	suppliers := processSuppliers(supplierRaw)
 	fmt.Printf("%+v\n", suppliers[0])
 
+	duration := time.Since(readingTime)
+	fmt.Printf("time for reading: %fs\n", duration.Seconds())
+
 	supplierMap := make(map[int64]int)
 
 	for i, supplier := range suppliers {
@@ -96,6 +102,7 @@ func main() {
 
 	join := make([]JointType, len(lineItems))
 
+	joiningTime := time.Now()
 	pointer := 0
 	for _, lineItem := range lineItems {
 		var newRow JointType
@@ -109,9 +116,14 @@ func main() {
 			pointer++
 		}
 	}
+	duration = time.Since(joiningTime)
+	fmt.Printf("time for joining: %fs\n", duration.Seconds())
 	fmt.Printf("%d records joined\n", len(suppliers)+len(lineItems))
+	writingTime := time.Now()
 	WriteFile(join[:pointer], "./assets/out.tbl")
+	duration = time.Since(writingTime)
 	fmt.Printf("%d lines written\n", pointer)
+	fmt.Printf("time for writing: %fs\n", duration.Seconds())
 }
 
 func WriteFile(data []JointType, filename string) {

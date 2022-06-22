@@ -100,7 +100,7 @@ func main() {
 	pointer := 0
 	for _, lineItem := range lineItems {
 		var newRow JointType
-		supplier := suppliers[lineItem.suppkey - 1]
+		supplier := suppliers[lineItem.suppkey-1]
 		if supplier.acctbal >= 0 {
 			continue
 		}

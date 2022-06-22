@@ -2,13 +2,13 @@ package lib
 
 import (
 	"bytes"
-	"io"
 	"encoding/csv"
-	"log"
-	"time"
 	"fmt"
-	"os"
 	"github.com/edsrzf/mmap-go"
+	"io"
+	"log"
+	"os"
+	"time"
 )
 
 type linereader func([]string)
@@ -17,7 +17,7 @@ type linereader func([]string)
   -
   - nr lines in the file
   - divide into chunks
- */
+*/
 func Readfile(s string, parser linereader) {
 	readingTime := time.Now()
 	file, err := os.Open(s)
@@ -27,7 +27,7 @@ func Readfile(s string, parser linereader) {
 	defer file.Close()
 
 	// mmap file
-	mmap, _ := mmap.Map(file, mmap.RDONLY, 0 )
+	mmap, _ := mmap.Map(file, mmap.RDONLY, 0)
 	defer mmap.Unmap()
 	fileReader := bytes.NewReader(mmap)
 
@@ -36,7 +36,6 @@ func Readfile(s string, parser linereader) {
 	csvReader.Comma = '|'
 	csvReader.ReuseRecord = true
 	// data, err := csvReader.ReadAll()
-
 
 	for {
 		rec, err := csvReader.Read()

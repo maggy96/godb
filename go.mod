@@ -1,3 +1,3 @@
-module maggy96/godb
+module godb
 
 go 1.18

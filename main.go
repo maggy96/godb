@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	util "godb/lib"
 	"log"
 	"os"
 	"strconv"
@@ -19,6 +20,13 @@ type Supplier struct {
 	acctbal float64
 	name    string
 	suppkey int64
+}
+
+type JointType struct {
+	acctbal  string
+	name     string
+	comment  string
+	shipdate string
 }
 
 func processSuppliers(data [][]string) []Supplier {
@@ -71,38 +79,57 @@ func processLineItems(data [][]string) []LineItem {
 }
 
 func main() {
-	f_lineitem, err := os.Open("./assets/lineitem.tbl")
-	if err != nil {
-		log.Fatal(err)
-	}
+	lineItemRaw := util.Readfile("./assets/lineitem.tbl")
+	supplierRaw := util.Readfile("./assets/supplier.tbl")
 
-	f_supplier, err := os.Open("./assets/supplier.tbl")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer f_lineitem.Close()
-	defer f_supplier.Close()
-
-	lineItemReader := csv.NewReader(f_lineitem)
-	supplierReader := csv.NewReader(f_supplier)
-	lineItemReader.Comma = '|'
-	supplierReader.Comma = '|'
-
-	data, err := lineItemReader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	lineItems := processLineItems(data)
+	lineItems := processLineItems(lineItemRaw)
 	fmt.Printf("%+v\n", lineItems[0])
 
-	data, errS := supplierReader.ReadAll()
-	if errS != nil {
-		log.Fatal(err)
+	suppliers := processSuppliers(supplierRaw)
+	fmt.Printf("%+v\n", suppliers[0])
+
+	supplierMap := make(map[int64]int)
+
+	for i, supplier := range suppliers {
+		supplierMap[supplier.suppkey] = i
 	}
 
-	suppliers := processSuppliers(data)
+	join := make([]JointType, len(lineItems))
 
-	fmt.Printf("%+v\n", suppliers[0])
+	pointer := 0
+	for _, lineItem := range lineItems {
+		var newRow JointType
+		supplier := suppliers[supplierMap[lineItem.suppkey]]
+		if supplier.acctbal < 0 {
+			newRow.comment = lineItem.comment
+			newRow.shipdate = lineItem.shipdate
+			newRow.name = supplier.name
+			newRow.acctbal = fmt.Sprintf("%.2f", supplier.acctbal)
+			join[pointer] = newRow
+			pointer++
+		}
+	}
+	fmt.Printf("%d records joined\n", len(suppliers)+len(lineItems))
+	WriteFile(join[:pointer], "./assets/out.tbl")
+	fmt.Printf("%d lines written\n", pointer)
+}
+
+func WriteFile(data []JointType, filename string) {
+	f, err := os.Create(filename)
+
+	if err != nil {
+		log.Fatalln("failed to open file", err)
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	w.Comma = '|'
+	defer w.Flush()
+
+	for _, record := range data {
+		rec := []string{record.name, record.shipdate, record.acctbal, record.comment}
+		if err := w.Write(rec); err != nil {
+			log.Fatalln("error writing record to file", err)
+		}
+	}
 }

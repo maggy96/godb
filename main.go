@@ -30,9 +30,10 @@ type JointType struct {
 	shipdate string
 }
 
-func processSuppliers(data [][]string) []Supplier {
-	suppliers := make([]Supplier, len(data))
-	for i, line := range data {
+func readSuppliers(filename string) []Supplier {
+	suppliers := make([]Supplier, 59986052)
+	i := 0
+	util.Readfile(filename, func(line []string) {
 		var rec Supplier
 		var err error
 		for j, field := range line {
@@ -51,14 +52,15 @@ func processSuppliers(data [][]string) []Supplier {
 			}
 		}
 		suppliers[i] = rec
-	}
-
+		i = i + 1
+	})
 	return suppliers
 }
 
-func processLineItems(data [][]string) []LineItem {
-	lineItems := make([]LineItem, len(data))
-	for i, line := range data {
+func readLineItems(filename string) []LineItem {
+	lineItems := make([]LineItem, 59986052)
+	i := 0
+	util.Readfile(filename, func(line []string) {
 		var rec LineItem
 		var err error
 		for j, field := range line {
@@ -74,31 +76,23 @@ func processLineItems(data [][]string) []LineItem {
 			}
 		}
 		lineItems[i] = rec
-	}
-
+		i = i + 1
+	})
 	return lineItems
 }
 
 func main() {
-	readingTime := time.Now()
 
-	lineItemRaw := util.Readfile("./assets/lineitem.tbl")
-	supplierRaw := util.Readfile("./assets/supplier.tbl")
+	parsingTime := time.Now()
 
-	lineItems := processLineItems(lineItemRaw)
-	fmt.Printf("%+v\n", lineItems[0])
+	lineItems := readLineItems("./assets/lineitem.tbl")
+	// fmt.Printf("%+v\n", lineItems[0])
 
-	suppliers := processSuppliers(supplierRaw)
-	fmt.Printf("%+v\n", suppliers[0])
+	suppliers := readSuppliers("./assets/supplier.tbl")
+	// fmt.Printf("%+v\n", suppliers[0])
 
-	duration := time.Since(readingTime)
+	duration := time.Since(parsingTime)
 	fmt.Printf("time for reading: %fs\n", duration.Seconds())
-
-	supplierMap := make(map[int64]int)
-
-	for i, supplier := range suppliers {
-		supplierMap[supplier.suppkey] = i
-	}
 
 	join := make([]JointType, len(lineItems))
 
@@ -106,15 +100,16 @@ func main() {
 	pointer := 0
 	for _, lineItem := range lineItems {
 		var newRow JointType
-		supplier := suppliers[supplierMap[lineItem.suppkey]]
-		if supplier.acctbal < 0 {
-			newRow.comment = lineItem.comment
-			newRow.shipdate = lineItem.shipdate
-			newRow.name = supplier.name
-			newRow.acctbal = fmt.Sprintf("%.2f", supplier.acctbal)
-			join[pointer] = newRow
-			pointer++
+		supplier := suppliers[lineItem.suppkey - 1]
+		if supplier.acctbal >= 0 {
+			continue
 		}
+		newRow.comment = lineItem.comment
+		newRow.shipdate = lineItem.shipdate
+		newRow.name = supplier.name
+		newRow.acctbal = fmt.Sprintf("%.2f", supplier.acctbal)
+		join[pointer] = newRow
+		pointer++
 	}
 	duration = time.Since(joiningTime)
 	fmt.Printf("time for joining: %fs\n", duration.Seconds())
